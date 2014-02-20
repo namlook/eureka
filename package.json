@@ -1,0 +1,23 @@
+{
+  "name": "eureka",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "Namlook",
+  "license": "BSD-2-Clause",
+  "devDependencies": {
+    "chai": "~1.8.1",
+    "mocha": "~1.14.0",
+    "coffeeify": "~0.6.0"
+  },
+  "dependencies": {
+    "underscore": "~1.5.2",
+    "underscore.string": "~2.3.3",
+    "async": "~0.2.9",
+    "express": "~3.4.8"
+  }
+}
