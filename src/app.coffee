@@ -1,18 +1,51 @@
+
 express = require 'express'
-app = express()
+engine = require './engine'
 
-# app.use("/public", express.static("#{__dirname}/../public"))
-# app.use(express.bodyParser())
-app.use(express.urlencoded())
-app.use(express.json())
+class Eureka
 
-version = 1
+    constructor: (@config) ->
+        baseApi = "/api/#{config.version}"
+        @db = @getDatabase()
 
-api = require './api'
+        @app = express()
+        # app.use("/public", express.static("#{__dirname}/../public"))
+        # app.use(express.bodyParser())
+        @app.use(express.urlencoded())
+        @app.use(express.json())
+        @app.use (req, res, next) =>
+            req.db = @db
+            next()
 
-app.get     "/#{version}/:type",       api.find
+        @app.get     "#{baseApi}/:type/count",            engine.count
+        @app.get     "#{baseApi}/:type/facets/:field",    engine.facets
+        @app.get     "#{baseApi}/:type",                  engine.find
 
 
+    getDatabase: () ->
+        unless @config.database?
+            return 'Eureka needs a database'
+        if @config.database.dbtype?
+            return @config.database
+
+        unless @config.database.adapter?
+            return 'Eureka needs a database adapter'
+
+        Model = require "../../archimedes/src/#{@config.database.adapter}/model"
+
+        models = {}
+        for modelName, modelInfos of @config.models
+            models[modelName] = Model.extend(modelInfos)
+
+        Database = require "../../archimedes/src/#{@config.database.adapter}/database"
+        db = new Database @config.database.config
+        db.registerModels models
+        return db
+
+
+    start: (port) ->
+        port = port or @config.port
+        @app.listen(port)
 
 # app.get     '/api/facets/:facet',       api.facets
 # app.get     '/api/facets',              api.facets
@@ -29,7 +62,4 @@ app.get     "/#{version}/:type",       api.find
 # app.get     '/api/:type/count',         api.count
 # app.get     '/api/:type',               api.all
 
-module.exports = app
-
-if require.main is module
-    app.listen(4000)
+module.exports = Eureka
