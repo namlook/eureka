@@ -36,9 +36,7 @@ validateType = (db, type) ->
 parseQuery = (query) ->
     results = {query: {}, options: {}}
     for key, value of query
-        console.log key, value['$exists']?
         if _.str.startsWith(key, '_') and key not in ['_id', '_type']
-            console.log '----'
             value = value2js(query[key])
             if value?
                 results.options[key[1..]] = value
@@ -48,9 +46,8 @@ parseQuery = (query) ->
             else if value['$exists']?
                 val = if value['$exists'] in ['true', '1', 'yes'] then true else false
                 value = {'$exists': val}
-            else if _.isArray(value)
+            else if _.isArray(value) and key isnt '_id'
                 value = {'$all': value}
-            console.log 'iii', key, value
             results.query[key] = value
     return results
 
@@ -62,25 +59,15 @@ parseQuery = (query) ->
 #   /api/1/organism_classification/count?
 #   /api/1/organism_classification/count?internetDisplay=true
 exports.count = (req, res) ->
-    console.log req.params.type, req.db
     error = validateType(req.db, req.params.type)
     if error
         return res.json {error: error}
     type = _.str.classify req.params.type
 
-    options = {}
+    {query, options} = parseQuery(req.query)
 
-    query = {}
-    for key, value of req.query
-        if _.str.startsWith key, '_'
-            value = value2js(req.query[key])
-            if value?
-                options[key[1..]] = value
-        else
-            query[key] = value
-
-    options = params2pojo(options)
     query = params2pojo(query)
+    options = params2pojo(options)
 
     console.log query, options
     req.db[type].count query, options, (err, results) ->
@@ -127,6 +114,37 @@ exports.find = (req, res) ->
             results: (o.toJSONObject({populate: options.populate}) for o in results)
         }
 
+# ## findIds
+# returns all documents that match the query
+# options attributes are prefixed by undescore.
+#
+# examples:
+#   /api/1/_id?_id=http://ceropath.org/instances/individual/c0030
+#   /api/1/_id?_id=http://ceropath.org/instances/individual/c0030&_id=http://ceropath.org/instances/individual/c0006
+exports.findIds = (req, res) ->
+
+    {query, options} = parseQuery(req.query)
+
+    console.log '°°°°', query, options
+
+    unless options.populate?
+        options.populate = false
+
+    options = params2pojo(options)
+    query = params2pojo(query)
+
+    if _.isString(options.populate) and options.populate.indexOf(',') > -1
+        options.populate = options.populate.split(',')
+
+    console.log '*****', query, options
+    req.db[type].find query, options, (err, results) ->
+        if err
+            err = err.message if err.message?
+            return res.json({error: err})
+        return res.json {
+            results: (o.toJSONObject({populate: options.populate}) for o in results)
+        }
+
 
 # ## facets
 # Group the data by a specified field
@@ -163,12 +181,12 @@ exports.facets = (req, res) ->
             if err
                 err = err.message if err.message?
                 return res.json({error: err})
-            return res.json(results)
+            return res.json({results: results})
     else
         req.db[type].facets field, query, options, (err, results) ->
             if err
                 err = err.message if err.message?
                 return res.json({error: err})
-            return res.json(results)
+            return res.json({results: results})
 
 

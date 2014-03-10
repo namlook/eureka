@@ -20,6 +20,7 @@ class Eureka
         @app.get     "#{baseApi}/:type/count",            engine.count
         @app.get     "#{baseApi}/:type/facets/:field",    engine.facets
         @app.get     "#{baseApi}/:type",                  engine.find
+        @app.get     "#{baseApi}/_id",                  engine.findIds
 
 
     getDatabase: () ->
@@ -34,7 +35,7 @@ class Eureka
         Model = require "../../archimedes/src/#{@config.database.adapter}/model"
 
         models = {}
-        for modelName, modelInfos of @config.models
+        for modelName, modelInfos of @config.schemas
             models[modelName] = Model.extend(modelInfos)
 
         Database = require "../../archimedes/src/#{@config.database.adapter}/database"
